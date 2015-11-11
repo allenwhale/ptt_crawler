@@ -1,8 +1,0 @@
-setup.py
-ptt_crawler/__init__.py
-ptt_crawler/ptt_crawler_utils.py
-ptt_crawler.egg-info/PKG-INFO
-ptt_crawler.egg-info/SOURCES.txt
-ptt_crawler.egg-info/dependency_links.txt
-ptt_crawler.egg-info/requires.txt
-ptt_crawler.egg-info/top_level.txt
