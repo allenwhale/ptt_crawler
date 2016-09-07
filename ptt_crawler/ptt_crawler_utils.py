@@ -159,8 +159,8 @@ class ArticleList:
         for div in soup.find_all(class_='r-ent'):
             if div.find(class_='title').find('a'):
                 self._article_urls.append(BASE_URL+div.find(class_='title').find('a')['href'])
-        self._next_url = soup.find(class_='btn-group pull-right').find_all('a')[2].get('href')
-        self._prev_url = soup.find(class_='btn-group pull-right').find_all('a')[1].get('href')
+        self._next_url = soup.find(class_='btn-group btn-group-paging').find_all('a')[2].get('href')
+        self._prev_url = soup.find(class_='btn-group btn-group-paging').find_all('a')[1].get('href')
         if self._next_url: self._next_url = BASE_URL + self._next_url
         if self._prev_url: self._prev_url = BASE_URL + self._prev_url
 
