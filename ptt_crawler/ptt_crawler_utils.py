@@ -6,6 +6,7 @@ import copy
 import time
 import re
 import sys
+import urllib.parse
 from hashlib import md5
 cookies = {'over18': '1'}
 ARTICLE_SCHEMA = {
@@ -25,6 +26,24 @@ REPLY_SCHEMA = {
         'hash': ''
         }
 BASE_URL = 'https://www.ptt.cc'
+JS_CODE = "/* <![CDATA[ */!function(t,e,r,n,c,a,p){try{t=document.currentScript||function(){for(t=document.getElementsByTagName('script'),e=t.length;e--;)if(t[e].getAttribute('data-cfhash'))return t[e]}();if(t&&(c=t.previousSibling)){p=t.parentNode;if(a=c.getAttribute('data-cfemail')){for(e='',r='0x'+a.substr(0,2)|0,n=2;a.length-n;n+=2)e+='%'+('0'+('0x'+a.substr(n,2)^r).toString(16)).slice(-2);p.replaceChild(document.createTextNode(decodeURIComponent(e)),c)}p.removeChild(t)}}catch(u){}}()/* ]]> */"
+
+def remove_email_protection(soup):
+    email_tags = soup.find_all('a', class_="__cf_email__")
+    for tag in email_tags:
+        data = tag['data-cfemail']
+        r = int('0x%s'%data[0:2], 16)
+        d = ''
+        for i in range(2, len(data), 2):
+            c = hex(int('0x%s'%data[i:i+2], 16) ^ r)[2:4]
+            d += '%'
+            d += c
+        new_tag = soup.new_tag("email")
+        new_tag.string = urllib.parse.unquote(d)
+        tag.replace_with(new_tag)
+    for tag in soup.find_all("email"):
+        tag.unwrap()
+    return soup
 
 def clean(s):
     pattern = re.compile('\s+')
@@ -34,7 +53,7 @@ class Article:
     def __init__(self, url, days):
         global ARTICLE_SCHEMA
         self._url = url
-        self._days = days
+        self._days = timedelta(days=days)
         self._raw = ''
         self._data = copy.deepcopy(ARTICLE_SCHEMA)
         self.fetch()
@@ -64,7 +83,7 @@ class Article:
             self._data = None
             return
         global REPLY_SCHEMA
-        soup = bs(self._raw, 'html.parser')
+        soup = remove_email_protection(bs(self._raw, 'html.parser'))
         article_metaline = soup.find_all('div', class_='article-metaline')
         try: self._data['board'] = soup.find('div', class_='article-metaline-right').find('span', class_='article-meta-value').text.split()[-1]
         except:
@@ -79,9 +98,11 @@ class Article:
         except: pass
         if datetime.now() - self._data['date'] > self._days:
             raise StopIteration
-        content = soup.find('div', id='main-content').text.split('\n')[8:]
+        content = soup.find('div', id='main-content').text.split('\n')[4:]
         content = content[:content.index('--') if '--' in content else None]
-        self._data['content'] = ' '.join(clean(line) for line in content)
+        content = ' '.join(clean(line) for line in content)
+        content = content.replace(JS_CODE, '')
+        self._data['content'] = content
 
         for idx, reply in enumerate(soup.find_all('div', class_='push')):
             r = copy.deepcopy(REPLY_SCHEMA)
